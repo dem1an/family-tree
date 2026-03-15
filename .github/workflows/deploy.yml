@@ -17,6 +17,15 @@ jobs:
           GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
         run: sed -i "s|GOOGLE_API_KEY_PLACEHOLDER|$GOOGLE_API_KEY|g" index.html
 
+      - name: Verify injection
+        run: |
+          if grep -q "GOOGLE_API_KEY_PLACEHOLDER" index.html; then
+            echo "ERROR: placeholder was not replaced"
+            exit 1
+          else
+            echo "OK: API key injected successfully"
+          fi
+
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
