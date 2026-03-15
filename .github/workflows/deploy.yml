@@ -14,7 +14,7 @@ jobs:
 
       - name: Inject API key
         env:
-          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY_PLACEHOLDER }}
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
         run: sed -i "s|GOOGLE_API_KEY_PLACEHOLDER|$GOOGLE_API_KEY|g" index.html
 
       - name: Deploy to GitHub Pages
