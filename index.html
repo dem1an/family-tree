@@ -709,13 +709,10 @@
 //  CONFIG — update these URLs after publishing your sheet
 // ═══════════════════════════════════════════════════════
 const CONFIG = {
-  // Folder where you store photos (relative path or full URL)
-  IMAGES_BASE: './images/',
-
   // Set to true to use local sample data instead of the Google Sheets API
   USE_SAMPLE_DATA: false,
   SHEET_ID: '1FlBqVevy_8i8kYcUBurXyRJV8-vDDwYxJU1Cs8klEW0',
-  API_KEY:  'AIzaSyAwrs5G__qCsvqPoBcSbEd22sTDIbabPqg',
+  API_KEY:  'GOOGLE_API_KEY_PLACEHOLDER',
 };
 
 // ═══════════════════════════════════════════════════════
@@ -785,6 +782,24 @@ async function loadData() {
 }
 
 // ═══════════════════════════════════════════════════════
+//  HELPERS
+// ═══════════════════════════════════════════════════════
+
+// Convert any Google Drive sharing URL to a direct-embed URL.
+// Accepts:
+//   https://drive.google.com/file/d/FILE_ID/view...
+//   https://drive.google.com/open?id=FILE_ID
+//   https://drive.google.com/uc?id=FILE_ID  (already correct)
+function driveUrl(url) {
+  if (!url) return '';
+  const fileMatch = url.match(/\/file\/d\/([^/?#]+)/);
+  if (fileMatch) return `https://drive.google.com/uc?export=view&id=${fileMatch[1]}`;
+  const idMatch = url.match(/[?&]id=([^&]+)/);
+  if (idMatch) return `https://drive.google.com/uc?export=view&id=${idMatch[1]}`;
+  return url; // already a direct URL or unknown format
+}
+
+// ═══════════════════════════════════════════════════════
 //  TRANSFORM DATA → FamilyTreeJS nodes
 // ═══════════════════════════════════════════════════════
 function buildNodes(people, relationships) {
@@ -830,7 +845,7 @@ function buildNodes(people, relationships) {
       _raw:   p,
     };
 
-    if (p.photo) node.img = CONFIG.IMAGES_BASE + p.photo;
+    if (p.photo) node.img = driveUrl(p.photo);
     if (spouses[p.id]?.length)  node.pids = spouses[p.id];
     if (parents[p.id]?.fid)     node.fid  = parents[p.id].fid;
     if (parents[p.id]?.mid)     node.mid  = parents[p.id].mid;
