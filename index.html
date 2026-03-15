@@ -1,0 +1,1258 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Родовід</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Raleway:wght@300;400;500&display=swap" rel="stylesheet" />
+  <script src="https://balkan.app/js/familytree.js"></script>
+
+  <style>
+    /* ── Reset & base ───────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:           #f7f3eb;
+      --surface:      #ffffff;
+      --surface2:     #f0ebe0;
+      --border:       #ddd0b8;
+      --gold:         #8a6820;
+      --gold-dim:     #b08830;
+      --gold-glow:    rgba(138,104,32,0.10);
+      --text:         #1a1510;
+      --text-dim:     #4a3f2f;
+      --text-muted:   #9a8d75;
+      --sidebar-w:    360px;
+      --header-h:     56px;
+      --font-display: 'Cormorant Garamond', Georgia, serif;
+      --font-ui:      'Raleway', sans-serif;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-ui);
+      overflow: hidden;
+    }
+
+    /* ── Header ─────────────────────────────────────── */
+    header {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: var(--header-h);
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      z-index: 100;
+      gap: 16px;
+    }
+
+    .header-title {
+      font-family: var(--font-display);
+      font-size: 1.5rem;
+      font-weight: 300;
+      letter-spacing: 0.12em;
+      color: var(--gold);
+      white-space: nowrap;
+    }
+
+    .header-title span {
+      color: var(--text-dim);
+      font-style: italic;
+      font-size: 1rem;
+      margin-left: 10px;
+    }
+
+    .search-wrap {
+      position: relative;
+      flex: 1;
+      max-width: 320px;
+    }
+
+    .search-wrap svg {
+      position: absolute;
+      left: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      pointer-events: none;
+    }
+
+    #search {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 7px 12px 7px 34px;
+      color: var(--text);
+      font-family: var(--font-ui);
+      font-size: 0.8rem;
+      font-weight: 300;
+      letter-spacing: 0.05em;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    #search::placeholder { color: var(--text-muted); }
+    #search:focus { border-color: var(--gold-dim); }
+
+    #search-results {
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 0; right: 0;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      overflow: hidden;
+      display: none;
+      z-index: 200;
+      max-height: 240px;
+      overflow-y: auto;
+    }
+
+    .search-item {
+      padding: 9px 14px;
+      cursor: pointer;
+      font-size: 0.8rem;
+      color: var(--text-dim);
+      border-bottom: 1px solid var(--border);
+      transition: background 0.15s;
+    }
+    .search-item:last-child { border-bottom: none; }
+    .search-item:hover { background: var(--border); color: var(--gold); }
+    .search-item strong { color: var(--text); font-weight: 500; }
+
+    .header-actions { display: flex; gap: 8px; }
+
+    .btn-icon {
+      width: 34px; height: 34px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text-dim);
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: color 0.2s, border-color 0.2s;
+    }
+    .btn-icon:hover { color: var(--gold); border-color: var(--gold-dim); }
+
+    /* ── Tree container ──────────────────────────────── */
+    #tree-wrap {
+      position: fixed;
+      top: var(--header-h);
+      left: 0;
+      right: 0;
+      bottom: 0;
+      transition: right 0.35s cubic-bezier(0.4,0,0.2,1);
+    }
+
+    #tree-wrap.sidebar-open {
+      right: var(--sidebar-w);
+    }
+
+    #tree {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* ── Sidebar ─────────────────────────────────────── */
+    #sidebar {
+      position: fixed;
+      top: var(--header-h);
+      right: calc(-1 * var(--sidebar-w));
+      width: var(--sidebar-w);
+      bottom: 0;
+      background: var(--surface);
+      border-left: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      transition: right 0.35s cubic-bezier(0.4,0,0.2,1);
+      z-index: 50;
+      overflow: hidden;
+    }
+
+    #sidebar.open {
+      right: 0;
+    }
+
+    .sidebar-close {
+      position: absolute;
+      top: 14px; right: 14px;
+      width: 28px; height: 28px;
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      color: var(--text-muted);
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: color 0.2s, border-color 0.2s;
+    }
+    .sidebar-close:hover { color: var(--gold); border-color: var(--gold-dim); }
+
+    /* Photo */
+    .sidebar-photo-wrap {
+      width: 100%;
+      height: 220px;
+      background: var(--surface2);
+      flex-shrink: 0;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .sidebar-photo-wrap::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 80px;
+      background: linear-gradient(transparent, var(--surface));
+    }
+
+    .sidebar-photo {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      object-position: top center;
+      display: block;
+    }
+
+    .sidebar-photo-placeholder {
+      width: 100%; height: 100%;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    .sidebar-photo-placeholder svg {
+      opacity: 0.12;
+    }
+
+    /* Content */
+    .sidebar-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px 24px 32px;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border) transparent;
+    }
+
+    .sidebar-name {
+      font-family: var(--font-display);
+      font-size: 1.9rem;
+      font-weight: 300;
+      line-height: 1.15;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+
+    .sidebar-maiden {
+      font-family: var(--font-display);
+      font-style: italic;
+      font-size: 1rem;
+      color: var(--text-dim);
+      margin-bottom: 16px;
+    }
+
+    .sidebar-dates {
+      font-size: 0.75rem;
+      letter-spacing: 0.1em;
+      color: var(--gold);
+      text-transform: uppercase;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .divider {
+      height: 1px;
+      background: var(--border);
+      margin: 18px 0;
+    }
+
+    .section-label {
+      font-size: 0.65rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--gold-dim);
+      margin-bottom: 10px;
+    }
+
+    /* Info rows */
+    .info-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 8px;
+      align-items: flex-start;
+    }
+
+    .info-icon {
+      color: var(--text-muted);
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .info-text {
+      font-size: 0.82rem;
+      font-weight: 300;
+      color: var(--text-dim);
+      line-height: 1.5;
+    }
+
+    .info-text .label {
+      color: var(--text-muted);
+      font-size: 0.72rem;
+      letter-spacing: 0.06em;
+      display: block;
+      margin-bottom: 1px;
+    }
+
+    /* Bio */
+    .bio-text {
+      font-family: var(--font-display);
+      font-size: 0.95rem;
+      font-weight: 300;
+      line-height: 1.75;
+      color: var(--text-dim);
+      font-style: italic;
+    }
+
+    /* Timeline */
+    .timeline {
+      position: relative;
+      padding-left: 18px;
+    }
+
+    .timeline::before {
+      content: '';
+      position: absolute;
+      left: 5px; top: 6px; bottom: 6px;
+      width: 1px;
+      background: var(--border);
+    }
+
+    .timeline-item {
+      position: relative;
+      margin-bottom: 14px;
+    }
+
+    .timeline-item::before {
+      content: '';
+      position: absolute;
+      left: -15px;
+      top: 6px;
+      width: 5px; height: 5px;
+      border-radius: 50%;
+      background: var(--gold-dim);
+    }
+
+    .timeline-date {
+      font-size: 0.7rem;
+      letter-spacing: 0.08em;
+      color: var(--gold-dim);
+      margin-bottom: 2px;
+    }
+
+    .timeline-event {
+      font-size: 0.82rem;
+      color: var(--text-dim);
+      font-weight: 300;
+    }
+
+    .timeline-place {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 1px;
+    }
+
+    /* Family links */
+    .family-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .family-chip {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 8px 10px;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      text-decoration: none;
+    }
+
+    .family-chip:hover {
+      border-color: var(--gold-dim);
+      background: var(--gold-glow);
+    }
+
+    .family-chip-avatar {
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      background: var(--border);
+      overflow: hidden;
+      flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    .family-chip-avatar img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+    }
+
+    .family-chip-info { overflow: hidden; }
+
+    .family-chip-role {
+      font-size: 0.62rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    .family-chip-name {
+      font-size: 0.78rem;
+      color: var(--text-dim);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* ── Loading ─────────────────────────────────────── */
+    #loading {
+      position: fixed;
+      inset: 0;
+      background: var(--bg);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      z-index: 999;
+      transition: opacity 0.5s;
+    }
+
+    #loading.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .loading-title {
+      font-family: var(--font-display);
+      font-size: 2rem;
+      font-weight: 300;
+      letter-spacing: 0.2em;
+      color: var(--gold);
+    }
+
+    .loading-bar-wrap {
+      width: 200px;
+      height: 1px;
+      background: var(--border);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .loading-bar {
+      position: absolute;
+      left: -100%;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background: var(--gold);
+      animation: loading-slide 1.4s ease-in-out infinite;
+    }
+
+    @keyframes loading-slide {
+      0%   { left: -100%; }
+      100% { left: 100%; }
+    }
+
+    /* ── Person picker modal ─────────────────────────── */
+    #picker-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(10, 8, 6, 0.92);
+      backdrop-filter: blur(6px);
+      z-index: 500;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: opacity 0.4s;
+    }
+
+    #picker-overlay.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    #picker-modal {
+      width: 520px;
+      max-width: calc(100vw - 40px);
+      max-height: 80vh;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.7);
+      animation: picker-in 0.35s cubic-bezier(0.34,1.56,0.64,1) both;
+    }
+
+    @keyframes picker-in {
+      from { opacity: 0; transform: translateY(24px) scale(0.97); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    .picker-header {
+      padding: 28px 28px 20px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .picker-header h2 {
+      font-family: var(--font-display);
+      font-weight: 300;
+      font-size: 1.7rem;
+      letter-spacing: 0.06em;
+      color: var(--gold);
+      margin-bottom: 4px;
+    }
+
+    .picker-header p {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      font-weight: 300;
+      letter-spacing: 0.04em;
+    }
+
+    .picker-search-wrap {
+      position: relative;
+      padding: 16px 28px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .picker-search-wrap svg {
+      position: absolute;
+      left: 42px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      pointer-events: none;
+    }
+
+    #picker-search {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 10px 14px 10px 36px;
+      color: var(--text);
+      font-family: var(--font-ui);
+      font-size: 0.85rem;
+      font-weight: 300;
+      letter-spacing: 0.04em;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    #picker-search::placeholder { color: var(--text-muted); }
+    #picker-search:focus { border-color: var(--gold-dim); }
+
+    #picker-list {
+      overflow-y: auto;
+      flex: 1;
+      padding: 8px 0;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border) transparent;
+    }
+
+    .picker-item {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 10px 28px;
+      cursor: pointer;
+      transition: background 0.15s;
+      border-bottom: 1px solid transparent;
+    }
+
+    .picker-item:hover {
+      background: var(--surface2);
+    }
+
+    .picker-avatar {
+      width: 42px; height: 42px;
+      border-radius: 50%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      overflow: hidden;
+      flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    .picker-avatar img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+    }
+
+    .picker-avatar svg { opacity: 0.25; }
+
+    .picker-info { flex: 1; overflow: hidden; }
+
+    .picker-fullname {
+      font-family: var(--font-display);
+      font-size: 1rem;
+      font-weight: 400;
+      color: var(--text);
+      margin-bottom: 2px;
+    }
+
+    .picker-meta {
+      font-size: 0.73rem;
+      color: var(--text-muted);
+      font-weight: 300;
+    }
+
+    .picker-meta .gold { color: var(--gold-dim); }
+
+    .picker-footer {
+      padding: 14px 28px;
+      border-top: 1px solid var(--border);
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      text-align: center;
+      flex-shrink: 0;
+    }
+
+  </style>
+</head>
+<body>
+
+<!-- Person picker modal -->
+<div id="picker-overlay">
+  <div id="picker-modal">
+    <div class="picker-header">
+      <h2>Ласкаво просимо</h2>
+      <p>Знайдіть себе у дереві, щоб почати перегляд</p>
+    </div>
+    <div class="picker-search-wrap">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input id="picker-search" type="text" placeholder="Введіть ім'я або прізвище…" autocomplete="off" />
+    </div>
+    <div id="picker-list">
+      <!-- populated by JS -->
+    </div>
+    <div class="picker-footer">або <a href="#" id="picker-skip" style="color:var(--gold-dim);text-decoration:none">переглянути все дерево</a></div>
+  </div>
+</div>
+
+<!-- Loading screen -->
+<div id="loading">
+  <div class="loading-title">Р О Д О В І Д</div>
+  <div class="loading-bar-wrap"><div class="loading-bar"></div></div>
+</div>
+
+<!-- Header -->
+<header>
+  <div class="header-title">
+    Родовід
+    <span id="tree-subtitle"></span>
+  </div>
+
+  <div class="search-wrap">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+    <input id="search" type="text" placeholder="Пошук за іменем…" autocomplete="off" />
+    <div id="search-results"></div>
+  </div>
+
+  <div class="header-actions">
+    <button class="btn-icon" id="btn-fit" title="Показати все дерево">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+    </button>
+    <button class="btn-icon" id="btn-fullscreen" title="На весь екран">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+    </button>
+  </div>
+</header>
+
+<!-- Tree -->
+<div id="tree-wrap">
+  <div id="tree"></div>
+</div>
+
+<!-- Sidebar -->
+<div id="sidebar">
+  <button class="sidebar-close" id="sidebar-close">
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+  </button>
+  <div class="sidebar-photo-wrap" id="sidebar-photo-wrap">
+    <div class="sidebar-photo-placeholder">
+      <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+    </div>
+  </div>
+  <div class="sidebar-content" id="sidebar-content">
+    <!-- filled by JS -->
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+//  CONFIG — update these URLs after publishing your sheet
+// ═══════════════════════════════════════════════════════
+const CONFIG = {
+  // Set to true to use local sample data instead of the Google Sheets API
+  USE_SAMPLE_DATA: false,
+  SHEET_ID: '1FlBqVevy_8i8kYcUBurXyRJV8-vDDwYxJU1Cs8klEW0',
+  API_KEY:  '',
+};
+
+// ═══════════════════════════════════════════════════════
+//  SAMPLE DATA (used when USE_SAMPLE_DATA = true)
+// ═══════════════════════════════════════════════════════
+const SAMPLE = {
+  people: [
+    { id:'i1', firstName:'Василь',  lastName:'Коваль',  maidenName:'',       gender:'M', birthDate:'1920-03-15', birthPlace:'Львів',        deathDate:'1985-01-10', deathPlace:'Київ',  photo:'' },
+    { id:'i2', firstName:'Ганна',   lastName:'Коваль',  maidenName:'Бойко',  gender:'F', birthDate:'1925-06-03', birthPlace:'Тернопіль',    deathDate:'',           deathPlace:'',      photo:'' },
+    { id:'i3', firstName:'Іван',    lastName:'Коваль',  maidenName:'',       gender:'M', birthDate:'1948-09-22', birthPlace:'Львів',        deathDate:'',           deathPlace:'',      photo:'' },
+    { id:'i4', firstName:'Оксана',  lastName:'Коваль',  maidenName:'Мельник',gender:'F', birthDate:'1950-01-01', birthPlace:'Івано-Франківськ', deathDate:'',       deathPlace:'',      photo:'' },
+    { id:'i5', firstName:'Марія',   lastName:'Коваль',  maidenName:'',       gender:'F', birthDate:'1972-05-05', birthPlace:'Львів',        deathDate:'',           deathPlace:'',      photo:'' },
+    { id:'i6', firstName:'Петро',   lastName:'Коваль',  maidenName:'',       gender:'M', birthDate:'1975-11-18', birthPlace:'Львів',        deathDate:'',           deathPlace:'',      photo:'' },
+    { id:'i7', firstName:'Олег',    lastName:'Шевченко',maidenName:'',       gender:'M', birthDate:'1970-03-08', birthPlace:'Київ',         deathDate:'',           deathPlace:'',      photo:'' },
+  ],
+  relationships: [
+    { personId:'i1', relatedPersonId:'i2', type:'чоловік/дружина' },
+    { personId:'i2', relatedPersonId:'i1', type:'чоловік/дружина' },
+    { personId:'i1', relatedPersonId:'i3', type:'батько/мати → дитина' },
+    { personId:'i2', relatedPersonId:'i3', type:'батько/мати → дитина' },
+    { personId:'i1', relatedPersonId:'i4', type:'батько/мати → дитина' },
+    { personId:'i2', relatedPersonId:'i4', type:'батько/мати → дитина' },
+    { personId:'i3', relatedPersonId:'i7', type:'чоловік/дружина' },
+    { personId:'i7', relatedPersonId:'i3', type:'чоловік/дружина' },  // wife treated as partner
+    { personId:'i3', relatedPersonId:'i5', type:'батько/мати → дитина' },
+    { personId:'i3', relatedPersonId:'i6', type:'батько/мати → дитина' },
+  ],
+  events: [
+    { personId:'i1', type:'народження',  date:'1920-03-15', place:'Львів',     note:'' },
+    { personId:'i1', type:'одруження',   date:'1947-06-12', place:'Львів',     note:'', withPersonId:'i2' },
+    { personId:'i1', type:'смерть',      date:'1985-01-10', place:'Київ',      note:'' },
+    { personId:'i2', type:'народження',  date:'1925-06-03', place:'Тернопіль', note:'' },
+    { personId:'i2', type:'одруження',   date:'1947-06-12', place:'Львів',     note:'', withPersonId:'i1' },
+    { personId:'i3', type:'народження',  date:'1948-09-22', place:'Львів',     note:'' },
+    { personId:'i3', type:'одруження',   date:'1971-08-20', place:'Львів',     note:'', withPersonId:'i7' },
+    { personId:'i4', type:'народження',  date:'1950-01-01', place:'Івано-Франківськ', note:'' },
+    { personId:'i5', type:'народження',  date:'1972-05-05', place:'Львів',     note:'' },
+    { personId:'i6', type:'народження',  date:'1975-11-18', place:'Львів',     note:'' },
+    { personId:'i7', type:'народження',  date:'1970-03-08', place:'Київ',      note:'' },
+  ]
+};
+
+// ═══════════════════════════════════════════════════════
+//  DATA LOADING
+// ═══════════════════════════════════════════════════════
+async function fetchSheet(tabName) {
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SHEET_ID}/values/${encodeURIComponent(tabName)}?key=${CONFIG.API_KEY}`;
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`Sheets API error: ${response.status}`);
+  const json = await response.json();
+
+  // Convert rows array → array of objects using first row as headers
+  const [headers, ...rows] = json.values;
+  return rows.map(row =>
+    Object.fromEntries(headers.map((h, i) => [h, row[i] ?? '']))
+  );
+}
+
+async function loadData() {
+  if (CONFIG.USE_SAMPLE_DATA) return SAMPLE;
+  const [people, relationships, events] = await Promise.all([
+    fetchSheet('People'),
+    fetchSheet('Relationships'),
+    fetchSheet('Events'),
+  ]);
+  return { people, relationships, events };
+}
+
+// ═══════════════════════════════════════════════════════
+//  HELPERS
+// ═══════════════════════════════════════════════════════
+
+// Convert any Google Drive sharing URL to a direct-embed URL.
+// Accepts:
+//   https://drive.google.com/file/d/FILE_ID/view...
+//   https://drive.google.com/open?id=FILE_ID
+//   https://drive.google.com/uc?id=FILE_ID  (already correct)
+function driveUrl(url) {
+  if (!url) return '';
+  const fileMatch = url.match(/\/file\/d\/([^/?#]+)/);
+  if (fileMatch) return `https://drive.google.com/uc?export=view&id=${fileMatch[1]}`;
+  const idMatch = url.match(/[?&]id=([^&]+)/);
+  if (idMatch) return `https://drive.google.com/uc?export=view&id=${idMatch[1]}`;
+  return url; // already a direct URL or unknown format
+}
+
+// ═══════════════════════════════════════════════════════
+//  TRANSFORM DATA → FamilyTreeJS nodes
+// ═══════════════════════════════════════════════════════
+function buildNodes(people, relationships) {
+  const peopleById = Object.fromEntries(people.map(p => [p.id, p]));
+  const spouses    = {};   // personId → [spouseId, ...]
+  const parents    = {};   // childId  → { fid, mid }
+
+  for (const rel of relationships) {
+    if (rel.type === 'чоловік/дружина') {
+      if (!spouses[rel.personId]) spouses[rel.personId] = [];
+      if (!spouses[rel.personId].includes(rel.relatedPersonId))
+        spouses[rel.personId].push(rel.relatedPersonId);
+    }
+    if (rel.type === 'батько/мати → дитина') {
+      const childId  = rel.relatedPersonId;
+      const parentId = rel.personId;
+      if (!parents[childId]) parents[childId] = {};
+      const parent = peopleById[parentId];
+      if (parent) {
+        if (parent.gender === 'M') parents[childId].fid = parentId;
+        else                       parents[childId].mid = parentId;
+      }
+    }
+  }
+
+  return people.map(p => {
+    const yearBorn  = yearOf(p.birthDate);
+    const yearDied  = yearOf(p.deathDate);
+
+    const dates = yearBorn
+      ? (yearDied ? `${yearBorn} – ${yearDied}` : `н. ${yearBorn}`)
+      : '';
+
+    const node = {
+      id:     p.id,
+      name:   `${p.firstName} ${p.lastName}`,
+      fname:  p.firstName,
+      lname:  p.lastName,
+      maiden: p.maidenName,
+      gender: p.gender === 'M' ? 'male' : 'female',
+      dates,
+      // raw fields for sidebar
+      _raw:   p,
+    };
+
+    if (p.photo) node.img = driveUrl(p.photo);
+    if (spouses[p.id]?.length)  node.pids = spouses[p.id];
+    if (parents[p.id]?.fid)     node.fid  = parents[p.id].fid;
+    if (parents[p.id]?.mid)     node.mid  = parents[p.id].mid;
+
+    return node;
+  });
+}
+
+function yearOf(dateStr) {
+  if (!dateStr) return null;
+  const match = dateStr.match(/\d{4}/);
+  return match ? match[0] : null;
+}
+
+// ═══════════════════════════════════════════════════════
+//  BUILD FAMILY TREE
+// ═══════════════════════════════════════════════════════
+let familyTree = null;
+let allNodes   = [];
+let allEvents  = [];
+
+function initTree(nodes) {
+  allNodes = nodes;
+
+  // ── Card: 140×170 — large photo top, name + dates below ──
+  FamilyTree.templates.gold = Object.assign({}, FamilyTree.templates.base);
+  // Restyle the inherited link — patch stroke color and width in the base template string
+  if (FamilyTree.templates.gold.link) {
+    FamilyTree.templates.gold.link = FamilyTree.templates.gold.link
+      .replace(/stroke="[^"]*"/, 'stroke="#b08830"')
+      .replace(/stroke-width="[^"]*"/, 'stroke-width="2px"');
+  }
+  FamilyTree.templates.gold.defs = `
+    <clipPath id="gold_img_clip">
+      <rect x="0" y="0" width="140" height="110" rx="6"/>
+    </clipPath>
+    <filter id="gold_shadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="rgba(0,0,0,0.12)"/>
+    </filter>
+    <linearGradient id="gold_fade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="1"/>
+    </linearGradient>
+  `;
+  FamilyTree.templates.gold.size = [140, 170];
+  FamilyTree.templates.gold.node = `
+    <rect width="140" height="170" rx="6" fill="#ffffff" stroke="#ddd0b8" stroke-width="1" filter="url(#gold_shadow)"/>
+    <rect x="0" y="0" width="140" height="110" rx="6" fill="#f0ebe0"/>
+  `;
+  FamilyTree.templates.gold.img_0 = `
+    <image preserveAspectRatio="xMidYMid slice"
+      clip-path="url(#gold_img_clip)"
+      xlink:href="{val}" x="0" y="0" width="140" height="110"/>
+    <rect x="0" y="78" width="140" height="32" fill="url(#gold_fade)"/>
+  `;
+  FamilyTree.templates.gold.field_0 = `
+    <text style="font-family:Cormorant Garamond,Georgia,serif;font-size:14px;font-weight:400;fill:#1a1510"
+      x="70" y="128" text-anchor="middle">{val}</text>`;
+  FamilyTree.templates.gold.field_1 = `
+    <text style="font-family:Cormorant Garamond,Georgia,serif;font-size:12px;font-weight:300;fill:#4a3f2f"
+      x="70" y="144" text-anchor="middle">{val}</text>`;
+  FamilyTree.templates.gold.field_2 = `
+    <text style="font-family:Raleway,sans-serif;font-size:9px;font-weight:300;fill:#8a6820;letter-spacing:0.8px"
+      x="70" y="160" text-anchor="middle">{val}</text>`;
+
+  // FamilyTree.js requires gender variants of each template
+  FamilyTree.templates.gold_male   = Object.assign({}, FamilyTree.templates.gold);
+  FamilyTree.templates.gold_female = Object.assign({}, FamilyTree.templates.gold);
+  // Propagate restyled link to gender variants
+  FamilyTree.templates.gold_male.link  = FamilyTree.templates.gold.link;
+  FamilyTree.templates.gold_female.link = FamilyTree.templates.gold.link;
+  // Subtle gender distinction: female nodes get a slightly warm tinted background
+  FamilyTree.templates.gold_female.node = `
+    <rect width="140" height="170" rx="6" fill="#fffaf5" stroke="#e8d4b0" stroke-width="1" filter="url(#gold_shadow)"/>
+    <rect x="0" y="0" width="140" height="110" rx="6" fill="#f5ede0"/>
+  `;
+
+  familyTree = new FamilyTree(document.getElementById('tree'), {
+    mode: 'light',
+    template: 'gold',
+    nodeBinding: {
+      field_0: 'fname',
+      field_1: 'lname',
+      field_2: 'dates',
+      img_0:   'img',
+    },
+    nodes: nodes,
+    nodeMouseClick: FamilyTree.action.none,
+    enableSearch: false,
+    scale: 1,
+    minPartnerSeparation: 30,
+    partnerChildrenSplitSeparation: 20,
+    toolbar: { zoom: true, fit: true },
+    // Translate toolbar labels (basic)
+    i18n: {
+      'zoom in':  'Збільшити',
+      'zoom out': 'Зменшити',
+      'fit':      'Вмістити',
+    }
+  });
+
+  // Click handler → open sidebar
+  familyTree.on('click', (sender, args) => {
+    const node = nodes.find(n => n.id === args.node.id);
+    if (node) openSidebar(node);
+    return false;
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+//  SIDEBAR
+// ═══════════════════════════════════════════════════════
+function openSidebar(node) {
+  const person = node._raw;
+  const wrap    = document.getElementById('tree-wrap');
+  const sidebar = document.getElementById('sidebar');
+
+  // Photo
+  const photoWrap = document.getElementById('sidebar-photo-wrap');
+  if (node.img) {
+    photoWrap.innerHTML = `<img class="sidebar-photo" src="${node.img}" alt="${node.name}" onerror="this.parentNode.innerHTML='<div class=sidebar-photo-placeholder>${placeholderSVG()}</div>'" />`;
+  } else {
+    photoWrap.innerHTML = `<div class="sidebar-photo-placeholder">${placeholderSVG()}</div>`;
+  }
+
+  const birthYear = yearOf(person.birthDate);
+  const deathYear = yearOf(person.deathDate);
+
+  let datesStr = '';
+  if (birthYear && deathYear) datesStr = `${birthYear} — ${deathYear}`;
+  else if (birthYear)         datesStr = `Н. ${birthYear}`;
+  else if (deathYear)         datesStr = `† ${deathYear}`;
+
+  const personEvents = allEvents
+    .filter(ev => ev.personId === person.id)
+    .sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+
+  const spouseIds = allNodes.filter(n => n.pids?.includes(person.id)).map(n => n.id);
+  const childIds  = allNodes.filter(n => n.fid === person.id || n.mid === person.id).map(n => n.id);
+  const parentIds = [node.fid, node.mid].filter(Boolean);
+
+  document.getElementById('sidebar-content').innerHTML = `
+    <div class="sidebar-name">${person.firstName} ${person.lastName}</div>
+    ${person.maidenName ? `<div class="sidebar-maiden">уроджена ${person.maidenName}</div>` : ''}
+    ${datesStr ? `<div class="sidebar-dates">${datesStr}</div>` : ''}
+
+    ${(person.birthPlace || person.deathPlace || person.burialPlace) ? `
+    <div class="divider"></div>
+    <div class="section-label">Місця</div>
+    ${person.birthPlace  ? infoRow('📍', 'Народження', person.birthPlace)  : ''}
+    ${person.deathPlace  ? infoRow('📍', 'Смерть',     person.deathPlace)  : ''}
+    ${person.burialPlace ? infoRow('📍', 'Поховання',  person.burialPlace) : ''}
+    ` : ''}
+
+    ${person.bio ? `
+    <div class="divider"></div>
+    <div class="section-label">Біографія</div>
+    <div class="bio-text">${person.bio}</div>
+    ` : ''}
+
+    ${person.note ? `
+    <div class="divider"></div>
+    <div class="section-label">Нотатки</div>
+    <div class="bio-text">${person.note}</div>
+    ` : ''}
+
+    ${personEvents.length ? `
+    <div class="divider"></div>
+    <div class="section-label">Хронологія</div>
+    <div class="timeline">
+      ${personEvents.map(entry => timelineItem(entry)).join('')}
+    </div>
+    ` : ''}
+
+    ${(parentIds.length || spouseIds.length || childIds.length) ? `
+    <div class="divider"></div>
+    <div class="section-label">Сім'я</div>
+    <div class="family-grid">
+      ${parentIds.map(id => familyChip(id, 'Батько/мати')).join('')}
+      ${spouseIds.map(id => familyChip(id, 'Чоловік/дружина')).join('')}
+      ${childIds.map(id => familyChip(id, 'Дитина')).join('')}
+    </div>
+    ` : ''}
+  `;
+
+  // Open
+  sidebar.classList.add('open');
+  wrap.classList.add('sidebar-open');
+}
+
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('tree-wrap').classList.remove('sidebar-open');
+}
+
+function placeholderSVG() {
+  return `<svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" style="opacity:0.20;color:var(--gold)"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`;
+}
+
+function infoRow(icon, label, value) {
+  return `<div class="info-row">
+    <span class="info-icon">${icon}</span>
+    <div class="info-text"><span class="label">${label}</span>${value}</div>
+  </div>`;
+}
+
+function timelineItem(entry) {
+  const nameMap = {
+    'народження': 'Народження', 'смерть': 'Смерть', 'одруження': 'Одруження',
+    'розлучення': 'Розлучення', 'хрещення': 'Хрещення', 'поховання': 'Поховання',
+    'еміграція': 'Еміграція', 'імміграція': 'Імміграція', 'професія': 'Професія',
+  };
+  const displayLabel = (entry.note && entry.type === 'професія')
+    ? entry.note
+    : (nameMap[entry.type] || entry.type);
+
+  const withPerson = entry.withPersonId ? allNodes.find(n => n.id === entry.withPersonId) : null;
+  const withText   = withPerson ? ` з ${withPerson.fname}` : '';
+
+  return `<div class="timeline-item">
+    <div class="timeline-date">${entry.date || '?'}</div>
+    <div class="timeline-event">${displayLabel}${withText}</div>
+    ${entry.place ? `<div class="timeline-place">${entry.place}</div>` : ''}
+  </div>`;
+}
+
+function familyChip(id, role) {
+  const person = allNodes.find(n => n.id === id);
+  if (!person) return '';
+  const avatarContent = person.img
+    ? `<img src="${person.img}" alt="" />`
+    : `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color:var(--text-muted)"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`;
+  return `<div class="family-chip" onclick="focusPerson('${id}')">
+    <div class="family-chip-avatar">${avatarContent}</div>
+    <div class="family-chip-info">
+      <div class="family-chip-role">${role}</div>
+      <div class="family-chip-name">${person.fname}</div>
+    </div>
+  </div>`;
+}
+
+function focusPerson(id) {
+  const node = allNodes.find(n => n.id === id);
+  if (node) {
+    document.getElementById('tree-subtitle').textContent = `${node.fname} ${node.lname}`;
+  }
+  familyTree.center(id, {}, () => {
+    if (node) openSidebar(node);
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+//  SEARCH
+// ═══════════════════════════════════════════════════════
+function initSearch() {
+  const input = document.getElementById('search');
+  const results = document.getElementById('search-results');
+
+  input.addEventListener('input', () => {
+    const q = input.value.trim().toLowerCase();
+    if (q.length < 2) { results.style.display = 'none'; return; }
+
+    const matches = allNodes.filter(n =>
+      n.name.toLowerCase().includes(q) ||
+      (n.maiden || '').toLowerCase().includes(q)
+    ).slice(0, 8);
+
+    if (!matches.length) { results.style.display = 'none'; return; }
+
+    results.innerHTML = matches.map(n => `
+      <div class="search-item" data-id="${n.id}">
+        <strong>${highlight(n.name, q)}</strong>
+        ${n.dates ? ` <span style="color:var(--text-muted);font-size:0.75rem">${n.dates}</span>` : ''}
+      </div>
+    `).join('');
+    results.style.display = 'block';
+
+    results.querySelectorAll('.search-item').forEach(el => {
+      el.addEventListener('click', () => {
+        const id = el.dataset.id;
+        input.value = '';
+        results.style.display = 'none';
+        focusPerson(id);
+      });
+    });
+  });
+
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.search-wrap')) results.style.display = 'none';
+  });
+}
+
+function highlight(text, query) {
+  const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return text.replace(new RegExp(`(${escaped})`, 'gi'), '<mark style="background:var(--gold-glow);color:var(--gold);border-radius:2px">$1</mark>');
+}
+
+// ═══════════════════════════════════════════════════════
+//  TOOLBAR BUTTONS
+// ═══════════════════════════════════════════════════════
+document.getElementById('btn-fit').addEventListener('click', () => {
+  familyTree?.fit();
+});
+
+document.getElementById('btn-fullscreen').addEventListener('click', () => {
+  if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+  else document.exitFullscreen();
+});
+
+document.getElementById('sidebar-close').addEventListener('click', closeSidebar);
+
+// ═══════════════════════════════════════════════════════
+//  PERSON PICKER
+// ═══════════════════════════════════════════════════════
+function showPicker(nodes) {
+  const overlay  = document.getElementById('picker-overlay');
+  const listEl   = document.getElementById('picker-list');
+  const searchEl = document.getElementById('picker-search');
+  const skipEl   = document.getElementById('picker-skip');
+
+  function renderList(filter = '') {
+    const q = filter.trim().toLowerCase();
+    const matches = nodes
+      .filter(n => !q || n.name.toLowerCase().includes(q) || (n.maiden||'').toLowerCase().includes(q))
+      .sort((a, b) => {
+        // Sort by birth year ascending so older generations appear first
+        const ya = yearOf(a._raw?.birthDate) || '9999';
+        const yb = yearOf(b._raw?.birthDate) || '9999';
+        return ya.localeCompare(yb);
+      });
+
+    listEl.innerHTML = matches.map(n => {
+      const p = n._raw;
+      const meta = [
+        p.birthDate ? yearOf(p.birthDate) : null,
+        p.birthPlace || null,
+      ].filter(Boolean).join(' · ');
+
+      const avatarHTML = n.img
+        ? `<img src="${n.img}" alt="" onerror="this.style.display='none'" />`
+        : `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color:var(--text-muted)"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`;
+
+      const nameHTML = q
+        ? highlight(`${p.firstName} ${p.lastName}`, q)
+        : `${p.firstName} ${p.lastName}`;
+
+      return `<div class="picker-item" data-id="${n.id}">
+        <div class="picker-avatar">${avatarHTML}</div>
+        <div class="picker-info">
+          <div class="picker-fullname">${nameHTML}${p.maidenName ? ` <span style="font-style:italic;color:var(--text-dim);font-size:0.85rem">(${p.maidenName})</span>` : ''}</div>
+          ${meta ? `<div class="picker-meta"><span class="gold">${meta}</span></div>` : ''}
+        </div>
+      </div>`;
+    }).join('');
+
+    listEl.querySelectorAll('.picker-item').forEach(el => {
+      el.addEventListener('click', () => selectPerson(el.dataset.id));
+    });
+  }
+
+  function selectPerson(id) {
+    overlay.classList.add('hidden');
+    setTimeout(() => overlay.remove(), 450);
+    focusPerson(id);
+  }
+
+  searchEl.addEventListener('input', () => renderList(searchEl.value));
+
+  skipEl.addEventListener('click', e => {
+    e.preventDefault();
+    overlay.classList.add('hidden');
+    setTimeout(() => overlay.remove(), 450);
+    familyTree.fit();
+  });
+
+  // Focus search after short delay
+  setTimeout(() => searchEl.focus(), 100);
+  renderList();
+}
+
+// ═══════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════
+(async () => {
+  try {
+    const { people, relationships, events } = await loadData();
+    allEvents = events;
+
+    const nodes = buildNodes(people, relationships);
+    initTree(nodes);
+    initSearch();
+
+    // Set subtitle
+    const surnames = [...new Set(people.map(p => p.lastName))].slice(0, 3).join(' · ');
+    document.getElementById('tree-subtitle').textContent = surnames;
+
+    // Show person picker after tree is ready
+    setTimeout(() => showPicker(nodes), 200);
+
+  } catch (err) {
+    console.error('Failed to load family tree data:', err);
+  } finally {
+    const loading = document.getElementById('loading');
+    loading.classList.add('hidden');
+    setTimeout(() => loading.remove(), 600);
+  }
+})();
+</script>
+</body>
+</html>
